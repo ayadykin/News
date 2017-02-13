@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>
+		function get(){         
+		    $.ajax({
+				contentType : 'application/json',
+		        url:'http://localhost:8011/news/'+ $('#id').val(), 
+		        type: 'GET'
+		    });
+		};
+        function post(){         
+            $.ajax({
+				contentType : 'application/json',
+                url:'http://localhost:8011/news', 
+                type: 'POST',
+                data:JSON.stringify({
+                	content : $('#content').val()
+            	})
+            });
+		};
+		function put(){         
+            $.ajax({
+				contentType : 'application/json',
+                url:'http://localhost:8011/news', 
+                type: 'PUT',
+                data:JSON.stringify({
+                	id : $('#id').val(),
+                	content : $('#content').val()
+            	})
+            });
+		};
+		function del(){         
+            $.ajax({
+				contentType : 'application/json',
+                url:'http://localhost:8011/news/' + $('#id').val(), 
+                type: 'DELETE'
+            });
+		};
+
+</script>
+</head>
+<body>
+	<p>REST News!</p>
+	Id : <input id="id" type="text"/><br/>
+	Content : <input id="content" type="text"/><br/>
+	<BUTTON onclick="get()">GET</BUTTON>
+	<BUTTON onclick="post()">POST</BUTTON>
+	<BUTTON onclick="put()">PUT</BUTTON>
+	<BUTTON onclick="del()">DELETE</BUTTON>
+</body>
+</html>

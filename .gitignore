@@ -1,0 +1,7 @@
+/ebin/
+/tmp/*
+_build/*
+.settings/*
+.project
+rebar.lock
+erl_crash.dump

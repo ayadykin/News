@@ -1,0 +1,1 @@
+-record(news, {id, content}).
