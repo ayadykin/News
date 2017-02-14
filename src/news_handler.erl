@@ -33,37 +33,33 @@ content_types_accepted(Req, State) ->
 	 ],Req, State}.
 
 delete_resource(Req, State) ->
-	N = cowboy_req:binding(paste_id, Req, -1),
-	case mnesia_news:delete_news(N) of
+	Id = get_id(Req),
+	case mnesia_news:delete_news(Id) of
 		{atomic, ok} -> 
 			Body = jsx:encode([{<<"response">>, ok}]);
 		{aborted, Reason} ->
 			Body = jsx:encode([{<<"response">>, Reason}])
 	end,
-	{ok, Req1} = cowboy_req:reply(200, #{}, Body, Req),
-    {ok, Req1, State}.
+	cowboy_req:reply(200, #{}, Body, Req).
 
 create_paste(Req, State) ->
-	N = cowboy_req:binding(paste_id, Req, -1),
 	
 	case cowboy_req:method(Req) of
 		<<"GET">> -> 
-			case N of
+			Id = get_id(Req),
+			case Id of
 				-1 ->
 					News = mnesia_news:get_all_news();				
 				_ ->
-					News = mnesia_news:get_news(N)
+					News = mnesia_news:get_news(Id)
 			end,
 			
 			Resp = lists:reverse(convert(News,[])),			
 			Body = jsx:encode(Resp);
 		
-		<<"POST">> -> 
-			{ok, ReqBody, _} = cowboy_req:read_body(Req),
-        	Req_Body_decoded = jsx:decode(ReqBody),
-        	[{<<"content">>, Content}] = Req_Body_decoded,
-			Escaped = escape_html_chars(Content),
-			case mnesia_news:create_news(Escaped) of
+		<<"POST">> -> 			
+			Content = get_content(Req),		
+			case mnesia_news:create_news(Content) of
 				{atomic, Result} ->
 					Body = jsx:encode([{<<"response">>, Result}]);
 				{aborted, Reason} ->
@@ -71,11 +67,8 @@ create_paste(Req, State) ->
 			end;
 		
 		<<"PUT">> -> 	
-			{ok, ReqBody, _} = cowboy_req:read_body(Req),
-        	Req_Body_decoded = jsx:decode(ReqBody),
-        	[{<<"id">>, Id}, {<<"content">>, Content}] = Req_Body_decoded,
-			
-
+			Id = get_id(Req),
+			Content = get_content(Req),	
 			case mnesia_news:update_news(Id, Content) of
 				{atomic, Result} ->
 					Body = jsx:encode([{<<"response">>, Result}]);
@@ -84,15 +77,26 @@ create_paste(Req, State) ->
 			end;
 		
 		_ ->
-			Body = <<"{\"rest\": \"Unsupport!\"}">>
+			Body = <<"{\"error\": \"Unsupport!\"}">>
 	end,
-    {ok, Req1} = cowboy_req:reply(200, #{}, Body, Req),
-    {ok, Req1, State}.
+    cowboy_req:reply(200, #{}, Body, Req).
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
+get_content(Req) ->
+	{ok, ReqBody, _} = cowboy_req:read_body(Req),
+	[{<<"content">>, Content}] = jsx:decode(ReqBody),
+	escape_html_chars(Content).
+
+get_id(Req) ->
+	Number = cowboy_req:binding(paste_id, Req, -1),
+	try erlang:binary_to_integer(Number) 
+	catch
+	   error:badarg -> -1
+	end.
+	
 convert({atomic,[]},[]) -> [];
 convert([], Res) -> Res;
 convert([Head | Tail], Res) -> 

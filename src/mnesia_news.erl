@@ -16,7 +16,7 @@ get_all_news() ->
 	do(qlc:q([X || X <- mnesia:table(news)])).
 
 get_news(Id) ->
-	{atomic, News} = mnesia:transaction(fun() -> mnesia:read(news, erlang:binary_to_integer(Id)) end),
+	{atomic, News} = mnesia:transaction(fun() -> mnesia:read(news, Id) end),
 	News.
 
 create_news(Content) ->
@@ -25,11 +25,11 @@ create_news(Content) ->
 	mnesia:transaction(fun() -> mnesia:write(News) end).
 
 update_news(Id, Content) ->
-	News = #news{id = erlang:binary_to_integer(Id), content = Content},
+	News = #news{id = Id, content = Content},
 	mnesia:transaction(fun() -> mnesia:write(News) end).
 
 delete_news(Id) ->
-	mnesia:transaction(fun() -> mnesia:delete({news, erlang:binary_to_integer(Id)}) end).
+	mnesia:transaction(fun() -> mnesia:delete({news, Id}) end).
 
 %% ====================================================================
 %% Internal functions

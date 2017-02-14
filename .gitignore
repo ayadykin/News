@@ -1,5 +1,6 @@
 /ebin/
 /tmp/*
+/deps/*
 _build/*
 .settings/*
 .project
