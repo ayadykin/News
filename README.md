@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/ayadykin/News.svg?branch=master)](https://travis-ci.org/ayadykin/News)
 
-# News webserver
+# News REST API
 
 =====
 
@@ -20,22 +20,24 @@
 
 Supported methods:
 
-*   'GET /': read all news
+*   `GET /` : read all news
   
     Responce : [{"id":1,"content":"<html>\n<head></head>\n<body>\n<div></div>\n</body>\n</html>"}]
   
-*   'GET /:news_id' : get news by id
+*   `GET /:news_id` : get news by id
 
-*   'POST/' : create news
+    Responce : [{"id":1,"content":"<html>\n<head></head>\n<body>\n<div></div>\n</body>\n</html>"}]
+
+*   `POST/` : create news
 
     Request : {"content":"<html>\n<head></head>\n<body>\n<div></div>\n</body>\n</html>"}
     
     Responce : {"response":"ok"}
     
-*   'PUT /:news_id' : update news
+*   `PUT /:news_id` : update news
 
     Responce : {"response":"ok"}
 
-*   'DELETE /:news_id' : delete news
+*   `DELETE /:news_id` : delete news
 
     Responce : {"response":"ok"}
