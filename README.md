@@ -21,11 +21,21 @@
 Supported methods:
 
 *   'GET /': read all news
-
-*   'GET /<nws_id>': get news by id
+  
+    Responce : [{"id":1,"content":"<html>\n<head></head>\n<body>\n<div></div>\n</body>\n</html>"}]
+  
+*   'GET /:news_id' : get news by id
 
 *   'POST/' : create news
 
-*   'PUT /<nws_id>' : update news
+    Request : {"content":"<html>\n<head></head>\n<body>\n<div></div>\n</body>\n</html>"}
+    
+    Responce : {"response":"ok"}
+    
+*   'PUT /:news_id' : update news
 
-*   'DELETE /<news_id>' : delete news
+    Responce : {"response":"ok"}
+
+*   'DELETE /:news_id' : delete news
+
+    Responce : {"response":"ok"}
