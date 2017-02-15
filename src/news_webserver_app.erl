@@ -21,7 +21,7 @@ start(_StartType, _StartArgs) ->
 			{"/news", news_handler, []}			
 		]}
 	]),
-	 {ok, _} = cowboy:start_clear(http, 100, [{port, 8011}], #{
+	 {ok, _} = cowboy:start_clear(http, 100, [{port, 8080}], #{
 		env => #{dispatch => Dispatch}
 	}),
     news_webserver_sup:start_link().

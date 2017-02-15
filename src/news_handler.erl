@@ -24,104 +24,114 @@ allowed_methods(Req, State) ->
 	{[<<"GET">>, <<"POST">>, <<"PUT">>, <<"DELETE">>], Req, State}.
 
 content_types_provided(Req, State) ->
-	{[		
-		{{<<"text">>, <<"plain">>, []}, create_paste}
-	], Req, State}.
+	{[{{<<"text">>,<<"plain">>, []}, create_paste}], Req, State}.
 
 content_types_accepted(Req, State) ->
-	{[
-	  {<<"application/json">>, create_paste}
-	 ],Req, State}.
+	{[{<<"application/json">>, create_paste}],Req, State}.
 
 delete_resource(Req, State) ->
 	Id = get_id(Req),
-	case mnesia_news:delete_news(Id) of
-		{atomic, ok} -> 
-			Body = jsx:encode([{<<"response">>, ok}]);
-		{aborted, Reason} ->
-			Body = jsx:encode([{<<"response">>, Reason}])
-	end,
-	cowboy_req:reply(200, #{}, Body, Req).
+	Result = mnesia_news:delete_news(Id),
+	Body = result_to_json(Result),
+	cowboy_req:reply(200, #{}, Body, Req),
+	{ok, Req, State}.
 
 create_paste(Req, State) ->
 	
 	case cowboy_req:method(Req) of
-		<<"GET">> -> 
-			Id = get_id(Req),
-			case Id of
-				-1 ->
-					News = mnesia_news:get_all_news();				
-				_ ->
-					News = mnesia_news:get_news(Id)
-			end,
-			
-			Resp = lists:reverse(convert(News, [])),			
-			Body = unescaped_html_chars(jsx:encode(Resp));
+		<<"GET">> -> 			
+			Body = get_from_db(Req);			
 		
-		<<"POST">> -> 			
-			Content = get_content(Req),				
-			Body = save_to_db(Content);			
+		<<"POST">> -> 						
+			Body = save_to_db(Req);			
 		
-		<<"PUT">> -> 	
-			Id = get_id(Req),
-			Content = get_content(Req),	
-			Body = update_to_db(Id, Content);
+		<<"PUT">> -> 				
+			Body = update_db(Req);
 		
 		_ ->
-			Body = <<"{\"error\": \"Unsupport!\"}">>
+			Body = <<"{\"error\": \"Method not supported !\"}">>
 	end,
-    cowboy_req:reply(200, #{}, Body, Req).
+    cowboy_req:reply(200, #{}, Body, Req),
+	{ok, Req, State}.
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+
+get_from_db(Req) ->
+	Id = get_id(Req),
+	case Id of
+		0 ->
+			Resp = mnesia_news:get_all_news();				
+		_ ->
+			Resp = mnesia_news:get_news(Id)
+	end,
+	case Resp of
+		{atomic, Result} ->
+			Responce = lists:reverse(convert_news(Result, [])),			
+			unescaped_html_chars(jsx:encode(Responce));		
+		{aborted, Reason} ->
+			jsx:encode([{<<"error">>, Reason}])
+	end.
 	
-save_to_db(Content) ->
+save_to_db(Req) ->
+	Content = get_content(Req),
 	case validate_html(Content) of
 		true->
 			Escaped = escape_html_chars(Content),
-			case mnesia_news:create_news(Escaped) of
-				{atomic, Result} ->
-					jsx:encode([{<<"response">>, Result}]);
-				{aborted, Reason} ->
-					jsx:encode([{<<"error">>, Reason}])
-			end;
+			Result = mnesia_news:create_news(Escaped),
+			result_to_json(Result);
 		false-> 
-			jsx:encode([{<<"error">>, <<"Error validate html.">>}])
+			jsx:encode([{<<"error">>, <<"Not valid html.">>}])
 	end.
 
-update_to_db(Id, Content) ->
-	case validate_html(Content) of
-		true->
-			Escaped = escape_html_chars(Content),
-			case mnesia_news:update_news(Id, Escaped) of
-				{atomic, Result} ->
-					jsx:encode([{<<"response">>, Result}]);
-				{aborted, Reason} ->
-					jsx:encode([{<<"error">>, Reason}])
-			end;
-		false-> 
-			jsx:encode([{<<"error">>, <<"Error validate html.">>}])
+update_db(Req) ->
+	Id = get_id(Req),
+	case Id of
+		0 ->
+			<<"{\"error\": \"Empty news_id path variable.\"}">>;
+		_ ->
+			Content = get_content(Req),	
+			case validate_html(Content) of
+				true->
+					Escaped = escape_html_chars(Content),
+					Result = mnesia_news:update_news(Id, Escaped),
+					result_to_json(Result);
+				false-> 
+					jsx:encode([{<<"error">>, <<"Not valid html.">>}])
+			end
 	end.
 
+%% Convert responce to json
+result_to_json(Resp) ->
+	case Resp of
+		{atomic, Result} ->
+			jsx:encode([{<<"response">>, Result}]);
+		{aborted, Reason} ->
+			jsx:encode([{<<"error">>, Reason}])
+	end.
+
+%% Get data from rest
 get_content(Req) ->
 	{ok, ReqBody, _} = cowboy_req:read_body(Req),
 	[{<<"content">>, Content}] = jsx:decode(ReqBody),
 	Content.
 
 get_id(Req) ->
-	Number = cowboy_req:binding(paste_id, Req, -1),
+	Number = cowboy_req:binding(paste_id, Req, 0),
 	try erlang:binary_to_integer(Number) 
 	catch
-	   error:badarg -> -1
+	   error:badarg -> 0
 	end.
 	
-convert({atomic,[]},[]) -> [];
-convert([], Res) -> Res;
-convert([Head | Tail], Res) -> 
+%% Convert db data for rest representation
+convert_news({atomic,[]},[]) -> [];
+convert_news([], Resp) -> Resp;
+convert_news([Head | Tail], Resp) -> 
 	{_, Id, Content} = Head,
-	convert(Tail, [[{<<"id">>, Id},{<<"content">>, Content}] | Res]).
+	convert_news(Tail, [[{<<"id">>, Id},{<<"content">>, Content}] | Resp]).
 
+%% Escape chars
 escape_html_chars(Bin) ->
 	<< <<(escape_html_char(B))/binary>> || <<B>> <= Bin >>.
 escape_html_char($<) -> <<"&lt;">>;

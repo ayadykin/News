@@ -8,14 +8,14 @@
 		function get(){         
 		    $.ajax({
 				contentType : 'application/json',
-		        url:'http://localhost:8011/news/'+ $('#id').val(), 
+		        url:'http://localhost:8080/news/'+ $('#id').val(), 
 		        type: 'GET'
 		    });
 		};
         function post(){         
             $.ajax({
 				contentType : 'application/json',
-                url:'http://localhost:8011/news', 
+                url:'http://localhost:8080/news', 
                 type: 'POST',
                 data:JSON.stringify({
                 	content : $('#content').val()
@@ -25,7 +25,7 @@
 		function put(){         
             $.ajax({
 				contentType : 'application/json',
-                url:'http://localhost:8011/news/' + $('#id').val(), 
+                url:'http://localhost:8080/news/' + $('#id').val(), 
                 type: 'PUT',
                 data:JSON.stringify({
                 	content : $('#content').val()
@@ -35,7 +35,7 @@
 		function del(){         
             $.ajax({
 				contentType : 'application/json',
-                url:'http://localhost:8011/news/' + $('#id').val(), 
+                url:'http://localhost:8080/news/' + $('#id').val(), 
                 type: 'DELETE'
             });
 		};

@@ -16,8 +16,7 @@ get_all_news() ->
 	do(qlc:q([X || X <- mnesia:table(news)])).
 
 get_news(Id) ->
-	{atomic, News} = mnesia:transaction(fun() -> mnesia:read(news, Id) end),
-	News.
+	mnesia:transaction(fun() -> mnesia:read(news, Id) end).
 
 create_news(Content) ->
 	Id = mnesia:dirty_update_counter(unique_ids, news_id, 1),
@@ -37,5 +36,4 @@ delete_news(Id) ->
 
 do(Q) ->
     F = fun() -> qlc:e(Q) end,
-    {atomic, Val} = mnesia:transaction(F),
-    Val.
+    mnesia:transaction(F).
