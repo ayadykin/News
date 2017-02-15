@@ -8,22 +8,24 @@
 
 1. Make sure you have added rebar in $PATH 
 
-1. Download dependencies `rebar get-deps`
+2. Download dependencies `rebar get-deps`
 
-2. compile `rebar compile`
+3. compile `rebar compile`
 
-3. run erl -pa ebin _build/default/lib/*/ebin -s news_webserver;
+4. run erl -pa ebin _build/default/lib/*/ebin -s news_webserver;
 
-open your browser on http://localhost:8080/static
+5. open your browser on http://localhost:8080/static
 
 ## API
 
 Supported methods:
 
-*   `GET /`: read all news
+*   'GET /': read all news
 
-*   `POST 
+*   'GET /<nws_id>': get news by id
 
-*   `PUT 
+*   'POST/' : create news
 
-*   `DELETE /<news_id>`: delete news
+*   'PUT /<nws_id>' : update news
+
+*   'DELETE /<news_id>' : delete news
