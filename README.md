@@ -22,7 +22,7 @@ Supported methods:
 
 *   `GET /` : read all news
   
-    Responce : [{"id":1,"content":"<html>\n<head></head>\n<body>\n<div></div>\n</body>\n</html>"}]
+    Responce : [{"id":1,"content":"\<html>\<head>\</head>\<body>\<div>\</div>\</body>\</html>"}]
   
 *   `GET /:news_id` : get news by id
 
