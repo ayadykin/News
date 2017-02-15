@@ -1,7 +1,5 @@
 -module(news_webserver).
 
--record( unique_ids, {type, id} ).
-
 -include("news.hrl").
 
 -define(APPS, [crypto, asn1, public_key, ssl,  ranch, cowlib, cowboy, news_webserver, mnesia, jsx]).
@@ -38,6 +36,6 @@ stop_apps([App | Apps]) ->
 	stop_apps(Apps).
 
 init() ->
-	mnesia:create_table( unique_ids, [{attributes, record_info(fields, unique_ids)}] ),
+	 mnesia:create_table(unique_ids, [{attributes, record_info(fields, unique_ids)}] ),
 	 mnesia:create_table(news, [{attributes, record_info(fields, news)}]).
 

@@ -1,1 +1,0 @@
--record(news, {id, content}).

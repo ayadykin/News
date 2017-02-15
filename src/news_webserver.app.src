@@ -1,14 +1,15 @@
 {application, news_webserver,
- [{description, "An OTP application"},
+ [{description, "REST application"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, { news_webserver_app, []}},
   {applications,
    [kernel,
-    stdlib
+    stdlib,
+    cowboy
    ]},
   {env,[]},
-  {modules, []},
+  {modules, [crypto, asn1, public_key, ssl,  ranch, cowlib, cowboy, news_webserver, mnesia, jsx]},
 
   {maintainers, []},
   {licenses, []},

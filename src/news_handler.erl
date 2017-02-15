@@ -4,6 +4,7 @@
 -module(news_handler).
 
 -import(mnesia_news, [get_all_news/0, get_news/1, create_news/1, update_news/2, delete_news/1]).
+-import(validate_html, [validate_html/1]).
 
 %% ====================================================================
 %% API functions
@@ -54,27 +55,17 @@ create_paste(Req, State) ->
 					News = mnesia_news:get_news(Id)
 			end,
 			
-			Resp = lists:reverse(convert(News,[])),			
-			Body = jsx:encode(Resp);
+			Resp = lists:reverse(convert(News, [])),			
+			Body = unescaped_html_chars(jsx:encode(Resp));
 		
 		<<"POST">> -> 			
-			Content = get_content(Req),		
-			case mnesia_news:create_news(Content) of
-				{atomic, Result} ->
-					Body = jsx:encode([{<<"response">>, Result}]);
-				{aborted, Reason} ->
-					Body = jsx:encode([{<<"error">>, Reason}])
-			end;
+			Content = get_content(Req),				
+			Body = save_to_db(Content);			
 		
 		<<"PUT">> -> 	
 			Id = get_id(Req),
 			Content = get_content(Req),	
-			case mnesia_news:update_news(Id, Content) of
-				{atomic, Result} ->
-					Body = jsx:encode([{<<"response">>, Result}]);
-				{aborted, Reason} ->
-					Body = jsx:encode([{<<"error">>, Reason}])
-			end;
+			Body = update_to_db(Id, Content);
 		
 		_ ->
 			Body = <<"{\"error\": \"Unsupport!\"}">>
@@ -84,11 +75,39 @@ create_paste(Req, State) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+	
+save_to_db(Content) ->
+	case validate_html(Content) of
+		true->
+			Escaped = escape_html_chars(Content),
+			case mnesia_news:create_news(Escaped) of
+				{atomic, Result} ->
+					jsx:encode([{<<"response">>, Result}]);
+				{aborted, Reason} ->
+					jsx:encode([{<<"error">>, Reason}])
+			end;
+		false-> 
+			jsx:encode([{<<"error">>, <<"Error validate html.">>}])
+	end.
+
+update_to_db(Id, Content) ->
+	case validate_html(Content) of
+		true->
+			Escaped = escape_html_chars(Content),
+			case mnesia_news:update_news(Id, Escaped) of
+				{atomic, Result} ->
+					jsx:encode([{<<"response">>, Result}]);
+				{aborted, Reason} ->
+					jsx:encode([{<<"error">>, Reason}])
+			end;
+		false-> 
+			jsx:encode([{<<"error">>, <<"Error validate html.">>}])
+	end.
 
 get_content(Req) ->
 	{ok, ReqBody, _} = cowboy_req:read_body(Req),
 	[{<<"content">>, Content}] = jsx:decode(ReqBody),
-	escape_html_chars(Content).
+	Content.
 
 get_id(Req) ->
 	Number = cowboy_req:binding(paste_id, Req, -1),
@@ -105,8 +124,12 @@ convert([Head | Tail], Res) ->
 
 escape_html_chars(Bin) ->
 	<< <<(escape_html_char(B))/binary>> || <<B>> <= Bin >>.
-
 escape_html_char($<) -> <<"&lt;">>;
 escape_html_char($>) -> <<"&gt;">>;
 escape_html_char($&) -> <<"&amp;">>;
 escape_html_char(C) -> <<C>>.
+
+unescaped_html_chars(Bin) ->
+	Bin1 = re:replace(Bin, "&lt;", "<", [global]),
+	Bin2 = re:replace(Bin1, "&gt;", ">", [global]),
+	re:replace(Bin2, "&amp;", "&", [global]).
