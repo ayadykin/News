@@ -30,11 +30,16 @@ content_types_accepted(Req, State) ->
 	{[{<<"application/json">>, create_paste}],Req, State}.
 
 delete_resource(Req, State) ->
-	Id = get_id(Req),
-	Result = mnesia_news:delete_news(Id),
-	Body = result_to_json(Result),
-	cowboy_req:reply(200, #{}, Body, Req),
-	{ok, Req, State}.
+	case Id = get_id(Req) of
+		{fail, Error} ->
+			cowboy_req:reply(200, #{}, Error, Req),
+			false;
+		_ ->
+			Result = mnesia_news:delete_news(Id),
+			Body = result_to_json(Result),
+			cowboy_req:reply(200, #{}, Body, Req),	
+			true
+	end.
 
 create_paste(Req, State) ->
 	
@@ -58,14 +63,21 @@ create_paste(Req, State) ->
 %% Internal functions
 %% ====================================================================
 
+%% Get news
 get_from_db(Req) ->
 	Id = get_id(Req),
-	case Id of
-		0 ->
-			Resp = mnesia_news:get_all_news();				
+	case  Id of
+		{fail, Error} ->
+			 Error;
+		_ when Id =< 0 ->
+			 Resp = mnesia_news:get_all_news(),				
+			 convert_response(Resp);
 		_ ->
-			Resp = mnesia_news:get_news(Id)
-	end,
+			 Resp = mnesia_news:get_news(Id),
+			 convert_response(Resp)
+	end.
+
+convert_response(Resp)->
 	case Resp of
 		{atomic, Result} ->
 			Responce = lists:reverse(convert_news(Result, [])),			
@@ -73,33 +85,44 @@ get_from_db(Req) ->
 		{aborted, Reason} ->
 			jsx:encode([{<<"error">>, Reason}])
 	end.
-	
+
+%% Save news
 save_to_db(Req) ->
 	Content = get_content(Req),
-	case validate_html(Content) of
-		true->
+	case validate(Content) of
+		{fail, Error} ->
+			Error;
+		_ ->
 			Escaped = escape_html_chars(Content),
 			Result = mnesia_news:create_news(Escaped),
-			result_to_json(Result);
-		false-> 
-			jsx:encode([{<<"error">>, <<"Not valid html.">>}])
+			result_to_json(Result)
 	end.
 
+%% Update news
 update_db(Req) ->
-	Id = get_id(Req),
-	case Id of
-		0 ->
-			<<"{\"error\": \"Empty news_id path variable.\"}">>;
-		_ ->
-			Content = get_content(Req),	
-			case validate_html(Content) of
-				true->
+	case Id = get_id(Req) of
+		{fail, Error} ->
+			Error;
+		_ when Id > 0 ->
+			Content = get_content(Req),
+			case validate(Content) of
+				{fail, Error} ->
+					Error;
+				_ ->
 					Escaped = escape_html_chars(Content),
 					Result = mnesia_news:update_news(Id, Escaped),
-					result_to_json(Result);
-				false-> 
-					jsx:encode([{<<"error">>, <<"Not valid html.">>}])
-			end
+					result_to_json(Result)
+			end;
+		_ -> 
+			<<"{\"error\": \"Empty news_id path variable.\"}">>
+	end.
+
+%% Validate html
+validate(Content) ->
+	case validate_html(Content) of
+		false -> 
+			{fail, jsx:encode([{<<"error">>, <<"Not valid html.">>}])};
+		true -> true
 	end.
 
 %% Convert responce to json
@@ -118,10 +141,10 @@ get_content(Req) ->
 	Content.
 
 get_id(Req) ->
-	Number = cowboy_req:binding(paste_id, Req, 0),
-	try erlang:binary_to_integer(Number) 
+	Number = cowboy_req:binding(paste_id, Req, <<"0">>),
+	try erlang:binary_to_integer(Number) 	
 	catch
-	   error:badarg -> 0
+	   error:badarg -> {fail, <<"{\"error\": \"Wrong news_id path variable.\"}">>}
 	end.
 	
 %% Convert db data for rest representation
