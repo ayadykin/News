@@ -36,6 +36,8 @@ Supported methods:
     
 *   `PUT /:news_id` : update news
 
+    Request : {"content":"\<html>\<head>\</head>\<body>\<div>\</div>\</body>\</html>"}
+
     Responce : {"response":"ok"}
 
 *   `DELETE /:news_id` : delete news
