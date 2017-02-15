@@ -1,25 +1,45 @@
 [![Build Status](https://travis-ci.org/ayadykin/News.svg?branch=master)](https://travis-ci.org/ayadykin/News)
 
-# News webserver
+# News REST API
 
 =====
 
-An OTP application
-
 ## Installation instructions
 
-1. Download dependencies `rebar get-deps`
+1. Make sure you have added rebar3 in $PATH 
 
-2. compile `rebar compile`
+2. Download dependencies `rebar3 get-deps`
+
+3. compile `rebar3 compile`
+
+4. run `erl -pa ebin _build/default/lib/*/ebin -s news_webserver`
+
+5. open your browser on `http://localhost:8080/static`
 
 ## API
 
 Supported methods:
 
-*   `GET /`: read all news
+*   `GET /` : read all news
+  
+    Responce : [{"id":1,"content":"\<html>\<head>\</head>\<body>\<div>\</div>\</body>\</html>"}]
+  
+*   `GET /:news_id` : get news by id
 
-*   `POST 
+    Responce : [{"id":1,"content":"\<html>\<head>\</head>\<body>\<div>\</div>\</body>\</html>"}]
 
-*   `PUT 
+*   `POST/` : create news
 
-*   `DELETE /<news_id>`: delete news
+    Request : {"content":"\<html>\<head>\</head>\<body>\<div>\</div>\</body>\</html>"}
+    
+    Responce : {"response":"ok"}
+    
+*   `PUT /:news_id` : update news
+
+    Request : {"content":"\<html>\<head>\</head>\<body>\<div>\</div>\</body>\</html>"}
+
+    Responce : {"response":"ok"}
+
+*   `DELETE /:news_id` : delete news
+
+    Responce : {"response":"ok"}
