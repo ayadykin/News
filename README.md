@@ -26,11 +26,11 @@ Supported methods:
   
 *   `GET /:news_id` : get news by id
 
-    Responce : [{"id":1,"content":"<html>\n<head></head>\n<body>\n<div></div>\n</body>\n</html>"}]
+    Responce : [{"id":1,"content":"\<html>\<head>\</head>\<body>\<div>\</div>\</body>\</html>"}]
 
 *   `POST/` : create news
 
-    Request : {"content":"<html>\n<head></head>\n<body>\n<div></div>\n</body>\n</html>"}
+    Request : {"content":"\<html>\<head>\</head>\<body>\<div>\</div>\</body>\</html>"}
     
     Responce : {"response":"ok"}
     
