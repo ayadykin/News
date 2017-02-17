@@ -3,8 +3,17 @@
 # News REST API
 
 =====
+## Installation with erlang.mk
 
-## Installation instructions
+1. Download dependencies run `make deps`
+
+2. Compile application run `make app`
+
+3. Make release run 'make rel'
+
+4. Run application 'make run'
+
+## Installation with rebar3
 
 1. Make sure you have added rebar3 in $PATH 
 
