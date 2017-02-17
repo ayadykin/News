@@ -36,6 +36,7 @@ stop_apps([App | Apps]) ->
 	stop_apps(Apps).
 
 init() ->
+	lager:start(),
 	 mnesia:create_table(unique_ids, [{attributes, record_info(fields, unique_ids)}] ),
 	 mnesia:create_table(news, [{attributes, record_info(fields, news)}]).
 

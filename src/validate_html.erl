@@ -13,9 +13,9 @@ validate_html(Content)->
 	try 
 		case xmerl_scan:string(erlang:binary_to_list(Content)) of
 			{Xml, _} ->  
-				[val(xmerl_xpath:string("//html", Xml))],
-				[val(xmerl_xpath:string("//head", Xml))],
-				[val(xmerl_xpath:string("//body", Xml))],
+				val(xmerl_xpath:string("//html", Xml)),
+				val(xmerl_xpath:string("//head", Xml)),
+				val(xmerl_xpath:string("//body", Xml)),
 				true
 		end
 	catch

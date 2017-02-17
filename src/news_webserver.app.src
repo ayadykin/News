@@ -9,7 +9,7 @@
     cowboy
    ]},
   {env,[]},
-  {modules, [crypto, asn1, public_key, ssl,  ranch, cowlib, cowboy, news_webserver, mnesia, jsx]},
+  {modules, []},
 
   {maintainers, []},
   {licenses, []},

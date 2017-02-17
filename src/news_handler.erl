@@ -32,32 +32,61 @@ content_types_accepted(Req, State) ->
 delete_resource(Req, State) ->
 	case Id = get_id(Req) of
 		{fail, Error} ->
-			cowboy_req:reply(200, #{}, Error, Req),
-			false;
-		_ ->
+			lager:error("Error delete news with id: ", Id),
+			cowboy_req:reply(400, #{}, Error, Req),
+			{false, Req, State};
+		_ ->			
+			lager:info("Delete news with id:", Id),
 			Result = mnesia_news:delete_news(Id),
 			Body = result_to_json(Result),
-			cowboy_req:reply(200, #{}, Body, Req),	
-			true
+			Req2 = cowboy_req:set_resp_body(Body, Req),
+			{true, Req2, State}
 	end.
 
 create_paste(Req, State) ->
 	
 	case cowboy_req:method(Req) of
 		<<"GET">> -> 			
-			Body = get_from_db(Req);			
+			lager:info("Get news"),
+			case Body = get_from_db(Req) of 			
+				{fail, Error} ->
+					lager:error("Error get news, reason : ", [Error]),
+					Req2 = cowboy_req:reply(400, #{}, Error, Req),
+					{true, Req2, State};
+				_ ->
+					{Body, Req, State}
+			end;
+		<<"POST">> -> 		
+			lager:info("Create news"),
+			case Body = save_to_db(Req) of 			
+				{fail, Error} ->
+					lager:error("Error create news, reason : ", [Error]),
+					Req2 = cowboy_req:set_resp_body(Error, Req),
+					Req3 = cowboy_req:reply(400, Req2),
+					{true, Req3, State};
+				_ ->
+					Req2 = cowboy_req:set_resp_body(Body, Req),
+					{true, Req2, State}
+			end;
 		
-		<<"POST">> -> 						
-			Body = save_to_db(Req);			
-		
-		<<"PUT">> -> 				
-			Body = update_db(Req);
+		<<"PUT">> -> 		
+			lager:info("Update news"),
+			case Body = update_db(Req) of 			
+				{fail, Error} ->
+					lager:error("Error update news, reason : ", [Error]),
+					Req2 = cowboy_req:set_resp_body(Error, Req),
+					Req3 = cowboy_req:reply(400, Req2),
+					{true, Req3, State};
+				_ ->
+					Req2 = cowboy_req:set_resp_body(Body, Req),
+					{true, Req2, State}
+			end;
 		
 		_ ->
-			Body = <<"{\"error\": \"Method not supported !\"}">>
-	end,
-    cowboy_req:reply(200, #{}, Body, Req),
-	{ok, Req, State}.
+			lager:error("Error method not supported"),
+			Body = jsx:encode([{<<"error">>, <<"Method not supported.">>}]),
+			cowboy_req:reply(400, #{}, Body, Req, State)
+	end.
 
 %% ====================================================================
 %% Internal functions
@@ -68,7 +97,7 @@ get_from_db(Req) ->
 	Id = get_id(Req),
 	case  Id of
 		{fail, Error} ->
-			 Error;
+			 {fail, Error};
 		_ when Id =< 0 ->
 			 Resp = mnesia_news:get_all_news(),				
 			 convert_response(Resp);
@@ -83,7 +112,7 @@ convert_response(Resp)->
 			Responce = lists:reverse(convert_news(Result, [])),			
 			unescaped_html_chars(jsx:encode(Responce));		
 		{aborted, Reason} ->
-			jsx:encode([{<<"error">>, Reason}])
+			{fail, jsx:encode([{<<"error">>, Reason}])}
 	end.
 
 %% Save news
@@ -91,7 +120,7 @@ save_to_db(Req) ->
 	Content = get_content(Req),
 	case validate(Content) of
 		{fail, Error} ->
-			Error;
+			{fail, Error};
 		_ ->
 			Escaped = escape_html_chars(Content),
 			Result = mnesia_news:create_news(Escaped),
@@ -102,25 +131,26 @@ save_to_db(Req) ->
 update_db(Req) ->
 	case Id = get_id(Req) of
 		{fail, Error} ->
-			Error;
+			{fail, Error};
 		_ when Id > 0 ->
 			Content = get_content(Req),
 			case validate(Content) of
 				{fail, Error} ->
-					Error;
+					{fail, Error};
 				_ ->
 					Escaped = escape_html_chars(Content),
 					Result = mnesia_news:update_news(Id, Escaped),
 					result_to_json(Result)
 			end;
 		_ -> 
-			<<"{\"error\": \"Empty news_id path variable.\"}">>
+			{fail, jsx:encode([{<<"error">>, <<"Empty news_id path variable..">>}])}
 	end.
 
 %% Validate html
 validate(Content) ->
 	case validate_html(Content) of
 		false -> 
+			lager:error("Error validete html"),
 			{fail, jsx:encode([{<<"error">>, <<"Not valid html.">>}])};
 		true -> true
 	end.
@@ -131,7 +161,7 @@ result_to_json(Resp) ->
 		{atomic, Result} ->
 			jsx:encode([{<<"response">>, Result}]);
 		{aborted, Reason} ->
-			jsx:encode([{<<"error">>, Reason}])
+			{fail, jsx:encode([{<<"error">>, Reason}])}
 	end.
 
 %% Get data from rest
@@ -144,7 +174,9 @@ get_id(Req) ->
 	Number = cowboy_req:binding(paste_id, Req, <<"0">>),
 	try erlang:binary_to_integer(Number) 	
 	catch
-	   error:badarg -> {fail, <<"{\"error\": \"Wrong news_id path variable.\"}">>}
+	    error:badarg -> 
+			lager:error("Error get news_id path variable"),
+			{fail, <<"{\"error\": \"Wrong news_id path variable.\"}">>}
 	end.
 	
 %% Convert db data for rest representation
