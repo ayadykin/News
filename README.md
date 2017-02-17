@@ -11,7 +11,7 @@
 
 3. Make release run 'make rel'
 
-4. Run application 'make run'
+4. Run application  '_rel/news_webserver/news_webserver.cmd'
 
 ## Installation with rebar3
 
