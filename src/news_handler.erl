@@ -3,9 +3,6 @@
 
 -module(news_handler).
 
--import(mnesia_news, [get_all_news/0, get_news/1, create_news/1, update_news/2, delete_news/1]).
--import(validate_html, [validate_html/1]).
-
 %% ====================================================================
 %% API functions
 %% ====================================================================
@@ -58,7 +55,9 @@ create_paste(Req, State) ->
 			end;
 		<<"POST">> -> 		
 			lager:info("Create news"),
-			case Body = save_to_db(Req) of 			
+			Body = save_to_db(Req),
+			erlang: display (Body),
+			case Body of 			
 				{fail, Error} ->
 					lager:error("Error create news, reason : ", [Error]),
 					Req2 = cowboy_req:set_resp_body(Error, Req),
@@ -99,7 +98,7 @@ get_from_db(Req) ->
 		{fail, Error} ->
 			 {fail, Error};
 		_ when Id =< 0 ->
-			 Resp = mnesia_news:get_all_news(),				
+			 Resp = mnesia_news:get_all_news(),		
 			 convert_response(Resp);
 		_ ->
 			 Resp = mnesia_news:get_news(Id),
@@ -109,7 +108,8 @@ get_from_db(Req) ->
 convert_response(Resp)->
 	case Resp of
 		{atomic, Result} ->
-			Responce = lists:reverse(convert_news(Result, [])),			
+			Responce = generate_news(Result),
+			lager:info("generate : ", Responce),			
 			unescaped_html_chars(jsx:encode(Responce));		
 		{aborted, Reason} ->
 			{fail, jsx:encode([{<<"error">>, Reason}])}
@@ -148,7 +148,7 @@ update_db(Req) ->
 
 %% Validate html
 validate(Content) ->
-	case validate_html(Content) of
+	case validate_html:validate_html(Content) of
 		false -> 
 			lager:error("Error validete html"),
 			{fail, jsx:encode([{<<"error">>, <<"Not valid html.">>}])};
@@ -176,12 +176,17 @@ get_id(Req) ->
 	catch
 	    error:badarg -> 
 			lager:error("Error get news_id path variable"),
-			{fail, <<"{\"error\": \"Wrong news_id path variable.\"}">>}
+			{fail, jsx:encode([{<<"error">>, <<"Wrong news_id path variable.">>}])}
 	end.
+
+%% Convert db data for rest representation (updated)
+generate_news(T) ->
+	[[{<<"id">>, Id}, {<<"content">>, Content}] || {_, Id, Content} <- T].
 	
 %% Convert db data for rest representation
+convert_news(Resp) -> convert_news(Resp, []).
 convert_news({atomic,[]},[]) -> [];
-convert_news([], Resp) -> Resp;
+convert_news([], Resp) -> lists:reverse(Resp);
 convert_news([Head | Tail], Resp) -> 
 	{_, Id, Content} = Head,
 	convert_news(Tail, [[{<<"id">>, Id},{<<"content">>, Content}] | Resp]).
