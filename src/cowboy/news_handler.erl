@@ -28,50 +28,29 @@ content_types_accepted(Req, State) ->
 	{[{<<"application/json">>, create_paste}],Req, State}.
 
 delete_resource(Req, State) ->
-	case Id = get_id(Req) of
-		_ when Id > 0 ->			
-			lager:info("Delete news with id:", Id),
-			Result = mnesia_news:delete_news(Id),
-			success_response(Result, Req, State); 
-		_ ->			
-			lager:error("Error delete news with id: ", Id),
-			error_response(<<"Empty news_id path variable.">>, Req, State)
-	end.
+	lager:info("Delete news"),
+	Body = delete_from_db(Req),
+	erlang: display (Body),
+	responce(Body, Req, State, "Error delete news, reason : ").
 
 create_paste(Req, State) ->
 	
 	case cowboy_req:method(Req) of
 		<<"GET">> -> 			
 			lager:info("Get news"),
-			case Body = get_from_db(Req) of 			
-				{fail, Error} ->
-					lager:error("Error get news, reason : ", [Error]),
-					error_response(Error, Req, State);
-				_ ->
-					{Body, Req, State}
-			end;
+			Body = get_from_db(Req),
+			{Body, Req, State};
 		<<"POST">> -> 		
 			lager:info("Create news"),
 			Body = save_to_db(Req),
 			erlang: display (Body),
-			case Body of 			
-				{fail, Error} ->
-					lager:error("Error create news, reason : ", [Error]),
-					error_response(Error, Req, State);
-				_ ->
-					success_response(Body, Req, State)
-			end;
+			responce(Body, Req, State, "Error create news, reason : ");
 		
 		<<"PUT">> -> 		
 			lager:info("Update news"),
 			Body = update_db(Req),
-			case Body of 			
-				{fail, Error} ->
-					lager:error("Error update news, reason : ", [Error]),
-					error_response(Error, Req, State);
-				_ ->
-					success_response(Body, Req, State)
-			end;
+			erlang: display (Body),
+			responce(Body, Req, State, "Error update news, reason : ");
 		
 		_ ->
 			lager:error("Error method not supported"),
@@ -106,44 +85,57 @@ convert_response(Resp)->
 %% Save news
 save_to_db(Req) ->
 	Content = get_content(Req),
-	case validate(Content) of
-		{fail, Error} ->
-			{fail, Error};
-		_ ->
-			Escaped = escape_html_chars(Content),
-			mnesia_news:create_news(Escaped)
-	end.
+	Res = validate_html(fun(Escaped) -> mnesia_news:create_news(Escaped) end, Content).
 	
 %% Update news
 update_db(Req) ->
+	validate_id(fun(Id) ->
+		Content = get_content(Req),
+		validate_html(fun(Escaped) -> mnesia_news:update_news(Id, Escaped) end, Content)
+	end, Req).
+
+%% Delete news
+delete_from_db(Req)->
+	validate_id(fun(Id) ->
+		mnesia_news:delete_news(Id)
+	end, Req).
+
+validate_html(F, Content) ->
+	lager:info("validate_html"),
+	case validate_html:validate_html(Content) of
+		false ->
+			lager:error("Error validete html"),
+			{fail, <<"Not valid html.">>};
+		true ->
+			Escaped = escape_html_chars(Content),
+			F(Escaped)
+	end.
+
+validate_id(F, Req) ->
+	lager:info("validate_id"),
 	case Id = get_id(Req) of
 		_ when Id > 0 ->
-			Content = get_content(Req),
-			case validate(Content) of
-				{fail, Error} ->
-					{fail, Error};
-				_ ->
-					Escaped = escape_html_chars(Content),
-					mnesia_news:update_news(Id, Escaped)
-			end;
-		_ -> 
+			F(Id);
+		_ ->			
 			{fail,<<"Empty news_id path variable.">>}
 	end.
 
-%% Validate html
-validate(Content) ->
-	case validate_html:validate_html(Content) of
-		false -> 
-			lager:error("Error validete html"),
-			{fail, <<"Not valid html.">>};
-		true -> true
+%% Generic responce
+responce(Body, Req, State, LogError) ->
+	erlang: display (Body),
+	case Body of 			
+		{fail, Error} ->
+			lager:error(LogError, [Error]),
+			error_response(Error, Req, State);
+		_ ->
+			success_response(Body, Req, State)
 	end.
 
 %% Success response
 success_response(Result, Req, State) ->
 	Body = result_to_json(Result),
-	cowboy_req:set_resp_body(Body, Req),
-	{true, Req, State}.
+	Req2 = cowboy_req:set_resp_body(Body, Req),
+	{true, Req2, State}.
 
 %% Error response
 error_response(Error, Req, State) ->

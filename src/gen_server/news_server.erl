@@ -8,7 +8,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([get_all_news/0]).
+-export([get_all_news/0, get_news/1]).
 -export([start_link/0]).
 
 -record(state, {}).
@@ -18,8 +18,12 @@ start_link() ->
 
 %% News Services API
 get_all_news() ->
-	lager:info("get_news()"),
+	lager:info("get_all_news()"),
 	gen_server:call(?MODULE, get_all_news).
+
+get_news(Id) ->
+	lager:info("get_news :", Id),
+	gen_server:call(?MODULE, {get_news, Id}).
 
 %% ====================================================================
 %% Behavioural functions
@@ -31,6 +35,11 @@ init([]) ->
 %% Callback Functions
 handle_call(get_all_news, _From, LoopData) ->
   Reply = mnesia_news:get_all_news(),
+  lager:info("handle_call -> get_all_news : ", Reply),
+  {reply, Reply, LoopData};
+
+handle_call({get_news, Id}, _From, LoopData) ->
+  Reply = mnesia_news:get_news(Id),
   lager:info("handle_call -> get_news : ", Reply),
   {reply, Reply, LoopData};
 
