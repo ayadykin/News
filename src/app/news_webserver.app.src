@@ -1,15 +1,14 @@
 {application, news_webserver,
  [{description, "REST application"},
   {vsn, "0.1.0"},
-  {registered, []},
-  {mod, { news_webserver_app, []}},
+  {registered, [news_webserver]},
+  {mod, { news_webserver, []}},
   {applications,
    [kernel,
-    stdlib,
-    cowboy
+    stdlib
    ]},
   {env,[]},
-  {modules, []},
+  {modules, [news_webserver, news_webserver_sup ]},
 
   {maintainers, []},
   {licenses, []},

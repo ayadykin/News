@@ -28,7 +28,9 @@ start_link() ->
 
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
-    {ok, { {one_for_all, 0, 1}, []} }.
+	 UsrChild = {news_server,{news_server, start_link, []},
+              permanent, 2000, worker, [news_server]},
+    {ok,{{one_for_all,1,1}, [UsrChild]}}.
 
 %%====================================================================
 %% Internal functions
